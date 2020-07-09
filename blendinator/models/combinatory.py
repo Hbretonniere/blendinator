@@ -19,14 +19,15 @@ def combinatory(latent_dim, input_shape, nb_conv_1x1):
     z_input = tfk.layers.Input(shape=2*latent_dim, name='Latent_space')
     features_input = tfk.layers.Input(shape=(input_shape[0], input_shape[1], 3), name='U-net_Features')
 
-    """ Create the gaussian and sample from it """
+    # Create the gaussian and sample from it
     mu = z_input[:, :latent_dim]
     log_sigma = z_input[:, latent_dim:]
-    sample = tfp.layers.DistributionLambda(make_distribution_fn=lambda t:\
-            tfd.MultivariateNormalDiag(loc=t[0], scale_diag=tf.exp(t[1])),
-            convert_to_tensor_fn=lambda s: s.sample(), name='Sample_from_the_LS')([mu, log_sigma])
+    sample = tfp.layers.DistributionLambda(
+        make_distribution_fn=lambda t: tfd.MultivariateNormalDiag(loc=t[0], scale_diag=tf.exp(t[1])),
+        convert_to_tensor_fn=lambda s: s.sample(), 
+        name='Sample_from_the_LS')([mu, log_sigma])
 
-    """ Make the sampling concatanable to the features"""
+    # Make the sampling concatanable to the features
     shape = features_input.shape
     spatial_shape = [shape[axis] for axis in [1,2]]
     multiples = [1] + spatial_shape
@@ -37,7 +38,7 @@ def combinatory(latent_dim, input_shape, nb_conv_1x1):
     features = tf.concat([features_input, broadcast_sample], axis =-1)
     # features = features_input
     for i in range(nb_conv_1x1):
-        features = conv2d_normal_reg(features, 3, 3, 'relu', f'combinatory_conv_{i}')
+        features = conv2d_normal_reg(features, 3, 1, 'relu', f'combinatory_conv_{i}')
     mu_log_sigma = features
     # combinatory_output = features
-    return tf.keras.Model(inputs=[features_input, z_input], outputs=[features], name='Combinatory')
+    return tfk.Model(inputs=[features_input, z_input], outputs=[features], name='Combinatory')
