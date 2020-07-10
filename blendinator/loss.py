@@ -4,7 +4,7 @@ import tensorflow_probability as tfp
 tfd = tfp.distributions
 
 
-def cross_entropy(label, prediction, beta):
+def cross_entropy(latent_dim, label, prediction, beta):
         
         batch_size = tf.cast(tf.shape(label)[0], tf.float32)
         flat_labels = tf.cast(tf.reshape(label, [-1]), dtype=tf.int32)

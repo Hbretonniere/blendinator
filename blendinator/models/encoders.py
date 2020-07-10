@@ -69,4 +69,4 @@ def image_with_label_encoder(input_shape, list_num_channels, block_size, latent_
     mu_log_sigma = tf.squeeze(mu_log_sigma, axis=[1,2])
     encoder_output = mu_log_sigma 
 
-    return tfk.Model(inputs=[img_input, label_input], outputs=[encoder_output], name='image_label_encoder')
+    return tfk.Model(inputs=[img_input, label_input], outputs=[encoder_output], name='image_with_label_encoder')
