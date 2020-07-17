@@ -13,7 +13,9 @@ def asinh_norm(x, y):
 
 
 """ Training Parameters """
-list_channels = [8, 16, 32, 64, 128, 128, 128, 128]
+base_channels = 32
+list_num_channels = [base_channels, 2*base_channels, 4*base_channels,
+                6*base_channels, 6*base_channels, 6*base_channels, 6*base_channels]    # List of the filters to do both in the Unet and the proba part
 nb_epochs = 1
 batch_size = 32
 lrs = np.zeros(nb_epochs) + 1.e-4 # 1e-3 * np.exp(-0.1 * np.arange(nb_epochs))
@@ -25,9 +27,16 @@ eval_every_n_step = 200
 """ Import and preprocess data (for me, segs = ground truth)"""
 checkpoint_path = "./data/checkpoints/check_test"
 
+
+data_path = '/data57/hbretonniere/FVAE/FVAE_emulated_data/for_deblender/phymasks/no_structure/'
+name = 'TU_FVAE_divided_1_3_re_field_0123.npy'  # there is 148996 stamps
+checkpoint_path = "/data57/hbretonniere/deblending/tf2/checkpoints_deblendator/"
+print("checkpoint path : ", checkpoint_path)
+
 """ Import data """
-imgs = fits.open('./data/small_train_dset_imgs.fits')[0].data[:10000]
-segs = fits.open('./data/small_train_dset_segs.fits')[0].data[:10000]
+imgs = np.expand_dims(np.load(data_path + 'stamps_WithNoise_' + name), axis=-1).astype('float32')
+segs = np.expand_dims(np.load(data_path + 'stamps_seg_' + name), axis=-1)
+
 
 train_slice = int(0.9 * imgs.shape[0])
 eval_slice = int(1 * imgs.shape[0])
@@ -50,18 +59,18 @@ PUnet = ProbaUNet((128, 128, 1), 10, list_channels, 1, 1)
 # PUnet.training_model.summary()
 # print('\n \n Summary of the prediction model')
 # PUnet.prediction_model.summary()
+print('\n \n Training the model')
 
 train_model = PUnet.training_model
 
-print('\n \n Training the model')
 
-# # ''' Oui je sais... je fais exactement ce que tu m as dit que je ne devrais pas faire....'''
-# history = [[],[],[]]
+# ''' Oui je sais... je fais exactement ce que tu m as dit que je ne devrais pas faire....'''
+history = [[],[],[]]
 
-# history = train(PUnet, train_data, nb_epochs, train_steps_per_epoch, lrs, betas, history, checkpoint_path)
+history = train(PUnet, train_data, nb_epochs, train_steps_per_epoch, lrs, betas, history, checkpoint_path)
 
-# plt.figure()
-# plt.plot(history[0])
+plt.figure()
+plt.plot(history[0])
 
 print('Restoring the model')
 PUNet_restored = ProbaUNet((128, 128, 1), 10, list_channels, 1, 1)
