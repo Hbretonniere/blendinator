@@ -8,12 +8,13 @@ tfd = tfp.distributions
 
 def combinatory(latent_dim, input_shape, nb_conv_1x1):
     """
-    The gaussian encoder is a submodel of the probabilistic Unet.
+    The combinatory model is a submodel of the probabilistic Unet.
     It samples from a Multivariate distribution parameterized by the output of the gaussian encoder,
     concatenate it to the unet features and convolves to produce the final ont hot encoded output.
 
     The inputs are [Tensor((None, 128, 128, n), dtype=float32), Tensor((None, 2*altent_dim), dtype=float32)]
     The output is a Tensor((None, 128, 128, 3), dtype=float32))
+
     """
 
     z_input = tfk.layers.Input(shape=2*latent_dim, name='Latent_space')

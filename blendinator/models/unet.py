@@ -5,8 +5,7 @@ from blendinator.models.blocks import upblock, downblock, conv2d_normal_reg
 
 def unet(input_shape, list_num_channels, block_size):
     """
-    # Functional Architecture
-    ####### Unet
+    Unet
     The unet is a submodel of the probabilistic Unet. I don't think there is a need of making the Encoder and the decoder sub-submodels.
     The Encoder use the downblock function, the Decoder the upblock function.
 
@@ -16,18 +15,20 @@ def unet(input_shape, list_num_channels, block_size):
     """
 
     unet_input = tfk.layers.Input(shape=input_shape, name='Image')
-    features=[unet_input]
+    features = [unet_input]
     for i, n_channels in enumerate(list_num_channels):
-        downsample = True
         if i == 0:
             downsample = False
+        else:
+            downsample = True
+
         features.append(downblock(features[-1],
                                 n_channels,
                                 block_size=block_size,
                                 downsample=downsample,
                                 name=f'Unet_downblock_{i}'))
     encoder_output = features[1:]
-
+    
     n = len(encoder_output) - 2
 
     lower_reso_features = encoder_output[-1]

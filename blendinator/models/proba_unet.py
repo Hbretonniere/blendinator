@@ -14,6 +14,8 @@ class ProbaUNet:
     
     Attributes
     ----------
+    input_shape :  int 
+        The input shape of the model
 
     latent_dim : int
         Dimension of the latent space (dimension of the Multivariate Gaussian Normal)
@@ -40,12 +42,13 @@ class ProbaUNet:
         self._setup_model()
         
     def _setup_model(self):
-        """ Create the different sub models of the Proba Unet ;
+
+        """ Create the different sub-models of the Proba Unet ;
         - the unet, which ouput a 3 classes temporary segmap 
-        - the img_encoder, which output a latent_dim dimensional gaussian from the input image
-        - the img_with_label_encoder, which output a latent_dim dimensional gaussian from a concatenation of the input image and the corresponding segmentation map (label)
+        - the img_encoder, which output the parameters (mu, sigma) of a latent_dim dimensional gaussian from the encoder of an image
+        - the img_with_label_encoder, which output the parameters (mu, sigma) of a latent_dim dimensional gaussian from a concatenation of the input image and the corresponding segmentation map (label)
         - the last_CNN, which convolves (last_conv times) a concatenation of the output of the unet and one of the two encoder to produce the final seg map
-        The two others model are just a combination of the others, but do not have any specific weights. It's the ProbaUnet in training mode (sampling from the imng_encoder_with_labels) and the ProbaUnet in prediction mode (sampling from the img_encoder). Updating one or the other just update the previously explained models."""
+        The two others model are just a combination of the others, but do not have any specific weights. It's the ProbaUnet in training mode (sampling from the img_encoder_with_labels) and the ProbaUnet in prediction mode (sampling from the img_encoder). Updating one or the other just update the previously explained models."""
         
         self.unet = unet(self.input_shape, self.channels, self.block_size)
         self.img_encoder = image_encoder(self.input_shape, self.channels, self.block_size, self.latent_dim)
@@ -88,7 +91,7 @@ class ProbaUNet:
         return cross_entropy(label, punet_output, beta)
 
     def train_step(self, features, labels, lr, beta):
-        """ Run the Punet in training mode (training_model), compute the loss and update the weights of all the submodels for one batch. Return the total loss, the reconstruction loss and the KL. """
+        """ Run the Punet in training mode (training_model), compute the loss and update the weights of all the submodels for one step. Return the total loss, the reconstruction loss and the KL. """
         
         with tf.GradientTape() as tape:
             punet_output = self.training_model([features, labels])
@@ -114,7 +117,7 @@ class ProbaUNet:
         self.model_combiner.load_weights(latest_checkpoint(f'{checkpoint_path}/model_combiner_weights/'))
         return()
 
-    def plot_prediction(self, features, labels, nb_to_plot, mode):
+    def predict_and_plot(self, features, labels, nb_to_plot, mode):
         
         import matplotlib.pyplot as plt
         if mode == 'predict':
