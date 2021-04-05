@@ -25,21 +25,21 @@ def combinatory(latent_dim, input_shape, nb_conv_1x1):
     log_sigma = z_input[:, latent_dim:]
     sample = tfp.layers.DistributionLambda(
         make_distribution_fn=lambda t: tfd.MultivariateNormalDiag(loc=t[0], scale_diag=tf.exp(t[1])),
-        convert_to_tensor_fn=lambda s: s.sample(), 
+        convert_to_tensor_fn=lambda s: s.sample(),
         name='Sample_from_the_LS')([mu, log_sigma])
 
     # Make the sampling concatanable to the features
     shape = features_input.shape
-    spatial_shape = [shape[axis] for axis in [1,2]]
+    spatial_shape = [shape[axis] for axis in [1, 2]]
     multiples = [1] + spatial_shape
     multiples.insert(3, 1)
     if len(sample.shape) == 2:
         sample = tfk.layers.Reshape((1, 1, latent_dim))(sample)
     broadcast_sample = tf.tile(sample, multiples)
-    features = tf.concat([features_input, broadcast_sample], axis =-1)
-    # features = features_input
+    features = tf.concat([features_input, broadcast_sample], axis=-1)
+
     for i in range(nb_conv_1x1):
         features = conv2d_normal_reg(features, 3, 1, 'relu', f'combinatory_conv_{i}')
     mu_log_sigma = features
-    # combinatory_output = features
-    return tfk.Model(inputs=[features_input, z_input], outputs=[features], name='Combinatory')
+
+    return tfk.Model(inputs=[features_input, z_input], outputs=[mu_log_sigma], name='Combinatory')
