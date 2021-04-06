@@ -1,2 +1,2 @@
 from .models.proba_unet import ProbaUNet
-import train
+import analyze_utils

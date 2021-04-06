@@ -3,12 +3,14 @@ import tensorflow as tf
 from tensorflow.train import latest_checkpoint
 import tensorflow.keras as tfk
 import sys
-from tqdm import tqdm
+# from tqdm import tqdm
+from tqdm.notebook import tqdm
 import matplotlib.pyplot as plt
 from blendinator.models.combinatory import combinatory
 from blendinator.models.unet import unet
 from blendinator.models.encoders import image_encoder, image_with_label_encoder
 from blendinator.loss import cross_entropy
+import json
 
 
 class ProbaUNet:
@@ -32,7 +34,7 @@ class ProbaUNet:
         Number of convolution layers to apply to the output of the Unet and the gaussian encoder
 
     """
-    def __init__(self, input_shape, latent_dim, channels, block_size, last_conv, optimizer=None):
+    def __init__(self, input_shape, latent_dim, channels, block_size, last_conv, device='GPU', optimizer=None):
 
         self.input_shape = input_shape
         self.latent_dim = latent_dim
@@ -40,8 +42,15 @@ class ProbaUNet:
         self.block_size = block_size
         self.last_conv = last_conv
         self.optimizer = optimizer if optimizer else tfk.optimizers.Adam
-
+        self.device = device
         self._setup_model()
+        self.hparams = {'input_shape':input_shape,
+                        'latent_dim':latent_dim,
+                        'channels':channels,
+                        'block_size':block_size,
+                         'last_conv':last_conv,
+                        'optimizer':optimizer}
+        
 
     def _setup_model(self):
 
@@ -110,8 +119,8 @@ class ProbaUNet:
         return [total_loss, rec_loss, kl_loss]
 
     def train(self, train_data, epochs, step_per_epoch,
-              lrs, betas, history, checkpoint_path, device='GPU:0', save_frequency=1):
-        with tf.device(device):
+              lrs, betas, history, checkpoint_path, save_frequency=1):
+        with tf.device(self.device):
             with tqdm(total=epochs, desc='Epoch', position=0) as bar1:
                 for epoch in range(epochs):
                     bar1.update(1)
@@ -138,12 +147,20 @@ class ProbaUNet:
                             # k+=1
                     if epoch % save_frequency == 0:
                         self.save_weights(epoch, checkpoint_path)
+        if 'trained_step' in self.hparams:
+            self.hparams['trained_step'] += epochs*step_per_epoch
+        else:
+            self.hparams['trained_step'] = epochs*step_per_epoch
+
+        with open(checkpoint_path+'hparams.txt', 'w') as file:
+             file.write(json.dumps(self.hparams)) # use `json.loads` to do the reverse
+
         return(history)
 
     def train_and_plot(self, train_data, plot_data, epochs, step_per_epoch,
                        lrs, betas, history, checkpoint_path,
-                       plot_steps, device='GPU:0', nb_to_plot=10, save_frequency=1):
-        with tf.device(device):
+                       plot_steps, nb_to_plot=10, save_frequency=1):
+        with tf.device(self.device):
             with tqdm(total=epochs, desc='Epoch', position=0) as bar1:
                 for epoch in range(epochs):
                     bar1.update(1)
@@ -157,7 +174,7 @@ class ProbaUNet:
                             bar2.set_description(f"PUnet, loss={history[0][-1]}")
                             # print(image.shape)
                             if (epoch*step_per_epoch)+batch_nb in plot_steps:
-                                predictions = self.prediction_model([plot_data[0][:nb_to_plot]])
+                                predictions = self.prediction_model([plot_data[0][:nb_to_plot]])[1]
                                 # print('predicitons : ', predictions.shape)
                                 fig, ax = plt.subplots(nb_to_plot, 3, figsize=(nb_to_plot/3*2, nb_to_plot * 2))
                                 ax[0, 0].set_title('Input Image')
@@ -180,42 +197,21 @@ class ProbaUNet:
     def save_weights(self, epoch, checkpoint_path):
         """ Save the weights of all the submodels, with a name corresponding to the current training step """
 
-        self.unet.save_weights(f'{checkpoint_path}/unet_weights/epoch_{epoch+1}')
-        self.img_encoder.save_weights(f'{checkpoint_path}/img_encoder_weights/epoch_{epoch+1}')
-        self.img_with_label_encoder.save_weights(f'{checkpoint_path}/img_with_label_encoder_weights/epoch_{epoch+1}')
-        self.last_CNN.save_weights(f'{checkpoint_path}/last_CNN_weights/epoch_{epoch+1}')
+        self.unet.save_weights(f'{checkpoint_path}unet_weights/epoch_{epoch+1}')
+        self.img_encoder.save_weights(f'{checkpoint_path}img_encoder_weights/epoch_{epoch+1}')
+        self.img_with_label_encoder.save_weights(f'{checkpoint_path}img_with_label_encoder_weights/epoch_{epoch+1}')
+        self.last_CNN.save_weights(f'{checkpoint_path}last_CNN_weights/epoch_{epoch+1}')
         return()
 
     def load_weights(self, checkpoint_path):
         """ Load the weights into all the submodels of the PUnet, according to the epoch written in the `checkpoint` file inside the checkpoint_path"""
-        self.unet.load_weights(latest_checkpoint(f'{checkpoint_path}/unet_weights/'))
-        self.img_encoder.load_weights(latest_checkpoint(f'{checkpoint_path}/img_encoder_weights/'))
-        self.img_with_label_encoder.load_weights(latest_checkpoint(f'{checkpoint_path}/img_with_label_encoder_weights/'))
-        self.last_CNN.load_weights(latest_checkpoint(f'{checkpoint_path}/last_CNN_weights/'))
+        self.unet.load_weights(latest_checkpoint(f'{checkpoint_path}unet_weights/'))
+        self.img_encoder.load_weights(latest_checkpoint(f'{checkpoint_path}img_encoder_weights/'))
+        self.img_with_label_encoder.load_weights(latest_checkpoint(f'{checkpoint_path}img_with_label_encoder_weights/'))
+        self.last_CNN.load_weights(latest_checkpoint(f'{checkpoint_path}last_CNN_weights/'))
         return()
 
-    def predict_and_plot(self, features, labels, nb_to_plot, mode):
 
-        import matplotlib.pyplot as plt
-        if mode == 'predict':
-            predictions = self.training_model([features, labels])
-        elif mode == 'training':
-            predictions = self.prediction_model([features])[0]
-        else:
-            sys.exit("You must chose the mode of prediction : 'predict' to use the ProbaUnet in prediction mode, 'training' for training mode")
-
-        fig, ax = plt.subplots(nb_to_plot, 3, figsize=(nb_to_plot/3*2, nb_to_plot * 2))
-        ax[0, 0].set_title('Input Image')
-        ax[0, 1].set_title('Input Gt')
-        ax[0, 2].set_title('Predicted segmap')
-        print(np.shape(predictions))
-        for i in range(nb_to_plot):
-            segmap = np.argmax(predictions[i], axis=-1)
-            ax[i, 0].imshow(features[i])
-            ax[i, 1].imshow(labels[i])
-            ax[i, 2].imshow(segmap)
-
-        return 0
 
     def print_models(self, path, show_shape=True):
 

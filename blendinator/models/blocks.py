@@ -23,7 +23,7 @@ def downblock(features,
               activation='relu',
               downsample=True,
               name='down_block'):
-    """A function which make a cycle of num_conv convolution/regularization/activation/downsampling"""
+    """A function which make a cycle of block_size convolution/regularization/activation/downsampling"""
 
     if downsample:
         features = tfk.layers.AveragePooling2D(padding='same', name=name+'_Downsample')(features)

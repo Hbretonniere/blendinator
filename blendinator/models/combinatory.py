@@ -40,6 +40,5 @@ def combinatory(latent_dim, input_shape, nb_conv_1x1):
 
     for i in range(nb_conv_1x1):
         features = conv2d_normal_reg(features, 3, 1, 'relu', f'combinatory_conv_{i}')
-    mu_log_sigma = features
-
-    return tfk.Model(inputs=[features_input, z_input], outputs=[mu_log_sigma], name='Combinatory')
+    one_hot_map = features
+    return tfk.Model(inputs=[features_input, z_input], outputs=[one_hot_map], name='Combinatory')
