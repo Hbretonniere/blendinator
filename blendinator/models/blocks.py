@@ -30,7 +30,7 @@ def downblock(features,
 
     for j in range(block_size):
         features = conv2d_normal_reg(
-            features, output_channels, kernel_size, activation, name)
+            features, output_channels, kernel_size, activation, f'{name}_{j}')
     return features
 
 
@@ -56,7 +56,7 @@ def upblock(lower_res_inputs,
 
     for j in range(block_size):
         features = conv2d_normal_reg(
-            features, output_channels, kernel_size, activation, name)
+            features, output_channels, kernel_size, activation, f'{name}_{j}')
 
     return features
 

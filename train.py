@@ -21,7 +21,7 @@ def asinh_norm(x, y):
 
 ''' Hyper parameters '''
 
-block_size = 1
+block_size = 3
 last_conv = 1
 ls_dim = 32
 eval_every_n_step = 200
@@ -41,7 +41,7 @@ betas = [0.5]
 
 """ Import and preprocess data (for me, segs = ground truth)"""
 local_path = 'checkpoints/'
-tycho_path = "./data/checkpoints/check_test_weighted/"
+tycho_path = "./data/checkpoints/check_test/"
 
 checkpoint_path = tycho_path #local_path
 

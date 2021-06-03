@@ -57,12 +57,14 @@ class ProbaUNet:
         if os.path.isfile(self.training_path+'losses.npy'):
             print('already trained model')
             self.history = np.load(self.training_path+'losses.npy')
-            print(type(self.history[0]))
-            self.history[0] = self.history[0].tolist()
-            self.history[1] = self.history[1].tolist()
-            self.history[2] = self.history[2].tolist()
+            print(type(self.history))
+            
+#             self.history[0] = self.history[0].tolist()
+#             self.history[1] = self.history[1].tolist()
+#             self.history[2] = self.history[2].tolist()
+            self.history = self.history.tolist()
             self.hparams['trained_step'] = len(self.history[0])
-            print(type(self.history[0]))
+            print(type(self.history))
         else:
             print('new training')
             self.history = [[], [], []]
