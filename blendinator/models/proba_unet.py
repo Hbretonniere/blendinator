@@ -12,6 +12,12 @@ from blendinator.models.encoders import image_encoder, image_with_label_encoder
 from blendinator.loss import cross_entropy, weighted_cross_entropy
 import json
 import os
+import logging 
+''' print in job '''
+logging.basicConfig(level=logging.INFO, format='%(message)s')
+logger = logging.getLogger()
+logger.addHandler(logging.FileHandler('test.log', 'a'))
+print = logger.info
 
 class ProbaUNet:
     """ProbaUNet
@@ -57,14 +63,8 @@ class ProbaUNet:
         if os.path.isfile(self.training_path+'losses.npy'):
             print('already trained model')
             self.history = np.load(self.training_path+'losses.npy')
-            print(type(self.history))
-            
-#             self.history[0] = self.history[0].tolist()
-#             self.history[1] = self.history[1].tolist()
-#             self.history[2] = self.history[2].tolist()
             self.history = self.history.tolist()
             self.hparams['trained_step'] = len(self.history[0])
-            print(type(self.history))
         else:
             print('new training')
             self.history = [[], [], []]
@@ -75,13 +75,18 @@ class ProbaUNet:
 
         """ Create the different sub-models of the Proba Unet ;
         - the unet, which ouput a 3 classes temporary segmap
+        
         - the img_encoder, which output the parameters (mu, sigma) of a latent_dim dimensional gaussian
              from the encoder of an image
+             
         - the img_with_label_encoder, which output the parameters (mu, sigma) of a latent_dim dimensional
             gaussian from a concatenation of the input image and the corresponding segmentation map (label)
+            
         - the last_CNN, which convolves (last_conv times) a concatenation of the output of the unet
             and one of the two encoder to produce the final seg map
+            
         The two others model are just a combination of the others, but do not have any specific weights.
+        
         It's the ProbaUnet in training mode (sampling from the img_encoder_with_labels) and
          the ProbaUnet in prediction mode (sampling from the img_encoder).
          Updating one or the other just update the previously explained models."""
@@ -127,7 +132,9 @@ class ProbaUNet:
         return cross_entropy(labels, punet_output, beta)
 
     def train_step(self, features, labels, lr, beta):
-        """ Run the Punet in training mode (training_model), compute the loss and update the weights of all the submodels for one step. 
+        
+        """ 
+        Run the Punet in training mode (training_model), compute the loss and update the weights of all the submodels for one batch. 
             Return the total loss, the reconstruction loss and the KL. """
 
         with tf.GradientTape() as tape:
@@ -142,11 +149,13 @@ class ProbaUNet:
 
     def train(self, train_data, epochs, step_per_epoch,
               lrs, betas, save_frequency=1):
+#         epochs = 5
         
+#         print('nb epochs', epochs, lr, beta)
         with tf.device(self.device):
             with tqdm(total=epochs, desc='Epoch', position=0) as bar1:
                 for epoch in range(epochs):
-                    print('epoch Number : ', epoch)
+                    print(f'epoch Number : {epoch}')
                     bar1.update(1)
                     with tqdm(total=step_per_epoch, desc='batch', position=1) as bar2:
                         for batch_nb, (image, label) in enumerate(train_data):
