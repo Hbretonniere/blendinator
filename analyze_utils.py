@@ -22,7 +22,8 @@ def show_data(img, seg, stamp_size, cmap='zscale'):
 def cut_grid(img, seg, stamp_size, show=False, x_start=128, y_start=128):
     
     x_field, y_field = np.shape(img)[0], np.shape(img)[1]
-    
+    x_field -= x_start
+    y_field -= y_start
     n_row = x_field//stamp_size
     n_column = y_field//stamp_size
     nb_stamp_test = n_row * n_column

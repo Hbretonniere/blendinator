@@ -13,6 +13,7 @@ from blendinator.loss import cross_entropy, weighted_cross_entropy
 import json
 import os
 import logging 
+
 ''' print in job '''
 logging.basicConfig(level=logging.INFO, format='%(message)s')
 logger = logging.getLogger()
@@ -40,7 +41,10 @@ class ProbaUNet:
         Number of convolution layers to apply to the output of the Unet and the gaussian encoder
 
     """
-    def __init__(self, input_shape, latent_dim, channels, block_size, last_conv, training_path, batch_size=32, loss='None', device='GPU', optimizer=None, history=None):
+    def __init__(self, input_shape, latent_dim, channels,
+                 block_size, last_conv, training_path,
+                 batch_size=32, loss='None', device='GPU', 
+                 optimizer=None, history=None):
 
         self.input_shape = input_shape
         self.latent_dim = latent_dim
@@ -61,12 +65,13 @@ class ProbaUNet:
                         'loss':loss}
         self.training_path = training_path
         if os.path.isfile(self.training_path+'losses.npy'):
-            print('already trained model')
+            print('\n \n already trained model \n \n')
+            self.load_weights()
             self.history = np.load(self.training_path+'losses.npy')
             self.history = self.history.tolist()
             self.hparams['trained_step'] = len(self.history[0])
         else:
-            print('new training')
+            print('\n \n new training \n \n')
             self.history = [[], [], []]
             self.hparams['trained_step'] = 0
         
@@ -148,7 +153,7 @@ class ProbaUNet:
         return [total_loss, rec_loss, kl_loss]
 
     def train(self, train_data, epochs, step_per_epoch,
-              lrs, betas, save_frequency=1):
+              lrs, betas, plot_frequency=0, save_frequency=1, plot_images=None):
 #         epochs = 5
         
 #         print('nb epochs', epochs, lr, beta)
@@ -180,9 +185,30 @@ class ProbaUNet:
                             #     eval_kl_loss_results.append(val_kl/valid)
                             bar2.set_description(f"PUnet, loss={self.history[0][-1]}")
                             # k+=1
-                    if epoch % save_frequency == 0:
-                        self.save_weights(epoch)
-        
+                    
+                            if (plot_frequency !=0):
+                                 if (step_per_epoch*epoch+batch_nb % plot_frequency == 0):
+                                    predictions = self.prediction_model([plot_images[0]])
+
+                                    fig, ax = plt.subplots(10, 6, figsize=(3*5,5*5))
+                                    ax[0, 0].set_title('Input Image')
+                                    ax[0, 1].set_title('Input Gt')
+                                    ax[0, 2].set_title('Predicted segmap')
+                                    for i in range(10):
+                                        vmin = np.min(predictions[i, :, :, 0])
+                                        vmax = np.max(predictions[i, :, :, 0])
+                                        segmap = np.argmax(predictions[i], axis=-1)
+                                        ax[i, 0].imshow(plot_images[0][i, :, :, 0])
+                                        ax[i, 1].imshow(plot_images[1][i, :, :, 0])
+
+                                        ax[i, 2].imshow(predictions[i, :, :, 0],vmin=vmin, vmax=vmax)
+                                        ax[i, 3].imshow(predictions[i, :, :, 1],vmin=vmin, vmax=vmax)
+                                        ax[i, 4].imshow(predictions[i, :, :, 2],vmin=vmin, vmax=vmax)
+                                        ax[i, 5].imshow(segmap, vmin=0, vmax=2)
+                                    plt.savefig(f'{self.training_path}training_pred_{len(self.history[0])}.png')
+                                    plt.close()
+                        if epoch % save_frequency == 0:
+                                        self.save_weights(epoch)
         ''' Save the loss '''
         np.save(self.training_path+'losses.npy', self.history)
         
