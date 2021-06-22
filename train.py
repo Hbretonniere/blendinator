@@ -16,8 +16,8 @@ logger.addHandler(logging.FileHandler('test.log', 'a'))
 print = logger.info
 
 
-def asinh_norm(x, y):
-    return tf.asinh(tf.divide(x, tf.math.reduce_max(x))), y
+# def asinh_norm(x, y):
+#     return tf.asinh(tf.divide(x, tf.math.reduce_max(x))), y
 
 ''' Hyper parameters '''
 
@@ -92,16 +92,23 @@ train_slice = int(0.9 * imgs.shape[0])
 eval_slice = int(0.95 * imgs.shape[0])
 train_steps_per_epoch = int(train_slice / batch_size)
 
-train_data = tf.data.Dataset.from_tensor_slices((imgs[:train_slice], segs[:train_slice])).shuffle(100000, reshuffle_each_iteration=True).map(asinh_norm).batch(batch_size).prefetch(tf.data.experimental.AUTOTUNE)
-eval_data = tf.data.Dataset.from_tensor_slices((imgs[train_slice:eval_slice], segs[train_slice:eval_slice])).shuffle(100000, reshuffle_each_iteration=True).map(asinh_norm).batch(batch_size).prefetch(tf.data.experimental.AUTOTUNE)
+''' If the stamps are not yet normalized '''
+# train_data = tf.data.Dataset.from_tensor_slices((imgs[:train_slice], segs[:train_slice])).shuffle(100000, reshuffle_each_iteration=True).map(asinh_norm).batch(batch_size).prefetch(tf.data.experimental.AUTOTUNE)
+# eval_data = tf.data.Dataset.from_tensor_slices((imgs[train_slice:eval_slice], segs[train_slice:eval_slice])).shuffle(100000, reshuffle_each_iteration=True).map(asinh_norm).batch(batch_size).prefetch(tf.data.experimental.AUTOTUNE)
+
+''' If the stamps are already normalized '''
+
+train_data = tf.data.Dataset.from_tensor_slices((imgs[:train_slice], segs[:train_slice])).shuffle(100000, reshuffle_each_iteration=True).batch(batch_size).prefetch(tf.data.experimental.AUTOTUNE)
+eval_data = tf.data.Dataset.from_tensor_slices((imgs[train_slice:eval_slice], segs[train_slice:eval_slice])).shuffle(100000, reshuffle_each_iteration=True).batch(batch_size).prefetch(tf.data.experimental.AUTOTUNE)
+
+test_images = imgs[-500:, :, :]
+test_segs = segs[-500:, :, :]
+plot_imgs = imgs[:10], segs[:10]
 
 del full_imgs
 del full_segs
 del imgs
 del segs
-
-test_images = imgs[-500:, :, :]
-test_segs = segs[-500:, :, :]
 
 # print('training images shape : ', imgs[:train_slice].shape)
 # print('eval images shape : ', imgs[train_slice:eval_slice].shape)
@@ -111,7 +118,6 @@ test_segs = segs[-500:, :, :]
 PUNet = ProbaUNet((stamps_size, stamps_size, 1), ls_dim, list_channels, block_size, last_conv, checkpoint_path, loss='classic')
 PUNet.print_models('models_summary/')
 
-plot_imgs = asinh_norm(imgs[:10], segs[:10])
 ''' Train '''
 history = PUNet.train(train_data,
                       nb_epochs, train_steps_per_epoch, lrs, betas, plot_frequency=20, plot_images=plot_imgs)
@@ -135,5 +141,5 @@ plt.savefig(checkpoint_path+'losses.png')
 s = 0
 nb_to_plot = 10
 t = s + nb_to_plot
-pred_fig = predict_and_plot(PUNet, asinh_norm(test_images[s:t], test_segs[s:t])[0], test_segs[s:t], nb_to_plot, 'training')
+pred_fig = predict_and_plot(PUNet, test_images[s:t], test_segs[s:t], nb_to_plot, 'training')
 pred_fig.savefig(checkpoint_path+'prediction.png')
